@@ -1,201 +1,72 @@
--- ============================================
--- Nama Script:    Ultimate Script v2.0
--- Author:         [alda]
--- Game Target:    Universal
--- Fitur:          ESP, Fly, Speed, Noclip, GUI, Keybind
--- ============================================
+-- script.lua - Versi super stabil tanpa library tambahan
+print("Script mulai dijalankan")
 
--- 🔒 Cegah script berjalan ganda
-if _G.ScriptLoaded then return end
-_G.ScriptLoaded = true
+-- Buat GUI sederhana tanpa library
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MySimpleGUI"
+screenGui.Parent = game.CoreGui
 
--- 📦 Load Service
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 300, 0, 400)
+frame.Position = UDim2.new(0.5, -150, 0.5, -200)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.BackgroundTransparency = 0.1
+frame.Parent = screenGui
+frame.Active = true
+frame.Draggable = true
 
--- ================================
--- 1. VARIABEL GLOBAL (Pengaturan Dasar)
--- ================================
-local features = {
-    ESP = false,
-    Fly = false,
-    Noclip = false,
-}
-local speedValue = 16 -- Kecepatan normal
-local flySpeed = 50
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 30)
+title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+title.Text = "Script Sederhana v1.0"
+title.TextColor3 = Color3.new(1,1,1)
+title.Parent = frame
 
--- ================================
--- 2. FITUR UTAMA
--- ================================
+-- Tombol Fly
+local flyBtn = Instance.new("TextButton")
+flyBtn.Size = UDim2.new(0, 260, 0, 40)
+flyBtn.Position = UDim2.new(0, 20, 0, 50)
+flyBtn.Text = "Aktifkan Fly"
+flyBtn.Parent = frame
 
--- 🕵️‍♂️ 2.1. ESP (Lihat Pemain)
-local espObjects = {}
-local function CreateESP()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local character = player.Character
-            if character and character:FindFirstChild("HumanoidRootPart") then
-                local esp = Instance.new("BillboardGui")
-                esp.Name = "ESP_" .. player.Name
-                esp.Size = UDim2.new(0, 200, 0, 50)
-                esp.StudsOffset = Vector3.new(0, 2.5, 0)
-                esp.AlwaysOnTop = true
+local flying = false
+local bodyVel = nil
 
-                local label = Instance.new("TextLabel", esp)
-                label.Text = string.format("%s\n[%.0fm]", player.Name, (character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude)
-                label.TextColor3 = player.TeamColor and player.TeamColor.Color or Color3.new(1, 0, 0)
-                label.BackgroundTransparency = 1
-                label.Size = UDim2.new(1, 0, 1, 0)
-
-                esp.Parent = character
-                table.insert(espObjects, esp)
-            end
-        end
-    end
-end
-
-local function ToggleESP()
-    features.ESP = not features.ESP
-    if features.ESP then
-        CreateESP()
-        Players.PlayerAdded:Connect(function(player)
-            if features.ESP then
-                task.wait(0.5)
-                CreateESP()
-            end
-        end)
-    else
-        for _, obj in pairs(espObjects) do obj:Destroy() end
-        espObjects = {}
-    end
-end
-
--- ✈️ 2.2. Fly Mode
-local bodyVelocity = nil
-local flyConnection = nil
-local function ToggleFly()
-    local char = LocalPlayer.Character
+flyBtn.MouseButton1Click:Connect(function()
+    local player = game.Players.LocalPlayer
+    local char = player.Character
     if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
     local humanoid = char:FindFirstChild("Humanoid")
-    local rootPart = char:FindFirstChild("HumanoidRootPart")
-    if not (humanoid and rootPart) then return end
-
-    features.Fly = not features.Fly
-    if features.Fly then
+    if not root or not humanoid then return end
+    
+    if not flying then
+        flying = true
+        flyBtn.Text = "Nonaktifkan Fly"
         humanoid.PlatformStand = true
-        bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(1e9, 1e9, 1e9)
-        bodyVelocity.Parent = rootPart
-
-        if flyConnection then flyConnection:Disconnect() end
-        flyConnection = RunService.RenderStepped:Connect(function()
-            if not features.Fly or not rootPart then
-                if flyConnection then flyConnection:Disconnect() end
-                return
-            end
-
-            local move = Vector3.new(0, 0, 0)
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0, 0, -flySpeed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0, 0, flySpeed) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-flySpeed, 0, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(flySpeed, 0, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0, flySpeed, 0) end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0, -flySpeed, 0) end
-
-            bodyVelocity.Velocity = char.CFrame:VectorToWorldSpace(move)
+        bodyVel = Instance.new("BodyVelocity")
+        bodyVel.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+        bodyVel.Parent = root
+        
+        game:GetService("RunService").RenderStepped:Connect(function()
+            if not flying then return end
+            if not root then return end
+            local move = Vector3.new(0,0,0)
+            local uis = game:GetService("UserInputService")
+            if uis:IsKeyDown(Enum.KeyCode.W) then move = move + Vector3.new(0,0,-50) end
+            if uis:IsKeyDown(Enum.KeyCode.S) then move = move + Vector3.new(0,0,50) end
+            if uis:IsKeyDown(Enum.KeyCode.A) then move = move + Vector3.new(-50,0,0) end
+            if uis:IsKeyDown(Enum.KeyCode.D) then move = move + Vector3.new(50,0,0) end
+            if uis:IsKeyDown(Enum.KeyCode.Space) then move = move + Vector3.new(0,50,0) end
+            if uis:IsKeyDown(Enum.KeyCode.LeftControl) then move = move + Vector3.new(0,-50,0) end
+            bodyVel.Velocity = char.CFrame:VectorToWorldSpace(move)
         end)
     else
+        flying = false
+        flyBtn.Text = "Aktifkan Fly"
         humanoid.PlatformStand = false
-        if bodyVelocity then bodyVelocity:Destroy() end
-        if flyConnection then flyConnection:Disconnect() end
-    end
-end
-
--- 🏃 2.3. Speed Hack
-local function SetSpeed(speed)
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChild("Humanoid") then
-        char.Humanoid.WalkSpeed = speed
-    end
-end
-
--- 🧱 2.4. Noclip (Tembus Dinding)
-local noclipConnection
-local function ToggleNoclip()
-    features.Noclip = not features.Noclip
-    if features.Noclip then
-        noclipConnection = RunService.Stepped:Connect(function()
-            if not LocalPlayer.Character then return end
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        end)
-    else
-        if noclipConnection then noclipConnection:Disconnect() end
-        if LocalPlayer.Character then
-            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
-    end
-end
-
--- ================================
--- 3. GUI MENGGUNAKAN WINDUI (Lebih Ringan & Stabil)
--- ================================
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-local Window = WindUI:CreateWindow({
-    Title = "Ultimate Script v2.0",
-    Author = "Your Name",
-    Folder = "MyScript",
-    Size = UDim2.fromOffset(600, 450),
-    ToggleKey = Enum.KeyCode.RightShift  -- Tekan Shift Kanan untuk Buka/Tutup GUI
-})
-
--- Tab Utama
-local MainTab = Window:AddTab("🚀 Main")
-
-MainTab:AddButton("Fly (Toggle)", function()
-    ToggleFly()
-end)
-MainTab:AddButton("Noclip (Toggle)", function()
-    ToggleNoclip()
-end)
-MainTab:AddSlider("Speed Hack", 16, 250, speedValue, function(value)
-    speedValue = value
-    SetSpeed(speedValue)
-end)
-
--- Tab Visuals
-local VisualsTab = Window:AddTab("👁️ Visuals")
-VisualsTab:AddButton("ESP Player (Toggle)", function()
-    ToggleESP()
-end)
-
--- Tab Pengaturan
-local SettingsTab = Window:AddTab("⚙️ Settings")
-SettingsTab:AddButton("Destroy UI", function()
-    Window:Destroy()
-end)
-
--- ================================
--- 4. KEYBIND (Tombol Pintasan)
--- ================================
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F then
-        ToggleFly()
-    elseif input.KeyCode == Enum.KeyCode.V then
-        ToggleNoclip()
-    elseif input.KeyCode == Enum.KeyCode.X then
-        ToggleESP()
+        if bodyVel then bodyVel:Destroy() end
     end
 end)
 
-print("Script v2.0 loaded! Press F to Fly, V to Noclip, X for ESP.")
+print("GUI selesai dibuat, script siap!")
